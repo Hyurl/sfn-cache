@@ -71,7 +71,7 @@ var cache = new Cache({
 
 // Pass a redis client:
 const redis = require("redis");
-const client = redis.createClient();
+var client = redis.createClient();
 var cache = new Cache(client);
 ```
 
