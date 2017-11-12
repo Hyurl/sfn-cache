@@ -34,6 +34,16 @@ class Cache {
         this.prefix = prefix || 'sfn-cache:';
     }
 
+    /** `true` if the channel is open. */
+    get connected() {
+        return !this.closed;
+    }
+
+    /** `true` if the channel is closed. */
+    get closed() {
+        return this.client ? this.client.closing : true;
+    }
+
     /**
      * Stores or updates a value.
      * @param {String} key 
@@ -127,9 +137,7 @@ class Cache {
         });
     }
 
-    /**
-     * Closes the cache channel.
-     */
+    /** Closes the cache channel. */
     close() {
         return this.client.quit();
     }

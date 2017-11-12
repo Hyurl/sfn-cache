@@ -45,6 +45,8 @@ const Cache = require("sfn-cache");
 - `cache.destroy()` Clears the cache entirely.
 - `cache.close()` Closes the cache channel, if you don't close the channel, 
     the program will hang until the redis server closes the connection.
+- `cache.connected` If the channel is open, it will be `true`.
+- `cache.closed` Opposite to `connected`.
 
 ### new Cache()
 
