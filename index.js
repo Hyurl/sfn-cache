@@ -9,27 +9,25 @@ class Cache {
      * Creates a cache channel.
      * @param {String|Object} [options] A redis url or an object sets the 
      *  connection information, or a redis client created by 
-     *  `redis.createClient()`. If pass an object, the object can carry an 
-     *  optional `prefix`. If this argument is missing, then connect to redis 
-     *  using default options.
+     *  `redis.createClient()`. If this argument is missing, then connect to 
+     *  redis using default options.
      */
     constructor(options = {}) {
         options = typeof options == "string" ? parse(options) : options;
-        var { host, port, password, client, database, setex, prefix } = options;
+        var { host, port, password, db, prefix, setex } = options;
 
         if ('function' === typeof setex) {
             this.client = options;
-        } else if (client) {
-            this.client = client;
         } else if (!port && !host) {
             this.client = new Redis.createClient();
+            if (password)
+                this.client.auth(password);
+            if (db)
+                this.client.select(db);
         } else {
+            options.prefix = null;
             this.client = new Redis.createClient(port, host, options);
         }
-        if (password)
-            this.client.auth(password);
-        if (database)
-            this.client.select(database);
 
         this.prefix = prefix || 'sfn-cache:';
     }

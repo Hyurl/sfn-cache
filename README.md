@@ -51,9 +51,8 @@ const Cache = require("sfn-cache");
 ### new Cache()
 
 - `[options]` A redis URL or an object sets the connection information, or a 
-    redis client created by `redis.createClient()`. If pass an object, the 
-    object can carry an optional `prefix`. If this argument is missing, then 
-    connect to redis using default options.
+    redis client created by `redis.createClient()`. If this argument is 
+    missing, then connect to redis using default options.
 
 ```javascript
 // Simplest way:
