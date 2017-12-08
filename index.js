@@ -1,5 +1,6 @@
 const Redis = require("redis");
-const parse = require("parse-redis-url")(Redis).parse
+const parse = require("parse-redis-url")(Redis).parse;
+const Clients = {};
 
 /**
  * Simple Friendly Node.js Cache.
@@ -15,21 +16,31 @@ class Cache {
     constructor(options = {}) {
         options = typeof options == "string" ? parse(options) : options;
         var { host, port, password, db, prefix, setex } = options;
+        host = host || "127.0.0.1";
+        port = port || 6379;
+
+        this.prefix = prefix || 'sfn-cache:';
+
+        // Data Source Name.
+        this.dsn = "redis://";
+        if (password)
+            this.dsn += `noname:${password}@`;
+        this.dsn += host + ":" + port;
+        if (db)
+            this.dsn += `/${db}`;
+        if (this.prefix)
+            this.dsn += `?prefix=${this.prefix}`;
 
         if ('function' === typeof setex) {
             this.client = options;
-        } else if (!port && !host) {
-            this.client = new Redis.createClient();
-            if (password)
-                this.client.auth(password);
-            if (db)
-                this.client.select(db);
         } else {
-            options.prefix = null;
-            this.client = new Redis.createClient(port, host, options);
+            // Same DSN refers to same client.
+            if(!Clients[this.dsn]){
+                options.prefix = null;
+                Clients[this.dsn] = new Redis.createClient(port, host, options);
+            }
+            this.client = Clients[this.dsn];
         }
-
-        this.prefix = prefix || 'sfn-cache:';
     }
 
     /** `true` if the channel is open. */
@@ -137,6 +148,7 @@ class Cache {
 
     /** Closes the cache channel. */
     close() {
+        delete Clients[this.dsn];
         return this.client.quit();
     }
 }
