@@ -1,6 +1,7 @@
 const Cache = require("./");
 
 (async() => {
+    var cache = null;
     try {
         var cache = new Cache(),
             data = await cache.set("a", [1, 2, 3], 10000),
@@ -10,5 +11,7 @@ const Cache = require("./");
     } catch (e) {
         console.log(e);
     }
-    cache.close();
+    
+    if(cache)
+        cache.close();
 })();
