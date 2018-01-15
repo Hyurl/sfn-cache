@@ -8,7 +8,7 @@ const Clients = {};
 class Cache {
     /**
      * Creates a cache channel.
-     * @param {string|Object} [options] A redis url or an object sets the 
+     * @param {string|object} [options] A redis url or an object sets the 
      *  connection information, or a redis client created by 
      *  `redis.createClient()`. If this argument is missing, then connect to 
      *  redis using default options.
