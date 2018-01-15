@@ -8,7 +8,7 @@ const Clients = {};
 class Cache {
     /**
      * Creates a cache channel.
-     * @param {String|Object} [options] A redis url or an object sets the 
+     * @param {string|Object} [options] A redis url or an object sets the 
      *  connection information, or a redis client created by 
      *  `redis.createClient()`. If this argument is missing, then connect to 
      *  redis using default options.
@@ -55,9 +55,9 @@ class Cache {
 
     /**
      * Stores or updates a value.
-     * @param {String} key 
-     * @param {Any} value 
-     * @param {Number} [ttl] 
+     * @param {string} key 
+     * @param {any} value 
+     * @param {number} [ttl] 
      */
     set(key, value, ttl = 0) {
         return new Promise((resolve, reject) => {
@@ -82,8 +82,8 @@ class Cache {
     }
 
     /**
-     * Retrieves a value by a given key, if no value, `null` will be returned.
-     * @param {String} key 
+     * Retrieves a value by a given key.
+     * @param {string} key 
      */
     get(key) {
         key = this.prefix + key;
@@ -105,13 +105,13 @@ class Cache {
 
     /**
      * Deletes a key from the cache.
-     * @param {String} key 
+     * @param {string} key 
      */
     delete(key) {
         key = this.prefix + key;
         return new Promise((resolve, reject) => {
             this.client.del(key, (e, res) => {
-                e ? reject(e) : resolve(res);
+                e ? reject(e) : resolve(null);
             });
         });
     }
@@ -132,7 +132,7 @@ class Cache {
                             if (e) {
                                 reject(e);
                             } else {
-                                data.length ? del(data) : resolve(res);
+                                data.length ? del(data) : resolve(null);
                             }
                         });
                     };
@@ -149,7 +149,7 @@ class Cache {
     /** Closes the cache channel. */
     close() {
         delete Clients[this.dsn];
-        return this.client.quit();
+        this.client.quit();
     }
 }
 

@@ -37,22 +37,24 @@ const Cache = require("sfn-cache");
 
 ## API
 
-- `new Cache([options: any])` Creates a cache channel.
-- `cache.set(key: string, value: any[, ttl: number])` Stores or updates a 
-    value.
-- `cache.get(key: string)` Retrieves a value by a given key.
-- `cache.delete(key: string)` Deletes a key from the cache.
-- `cache.destroy()` Clears the cache entirely.
-- `cache.close()` Closes the cache channel, if you don't close the channel, 
+- `new Cache(dsn?: string)` Creates a cache channel with a redis URL.
+- `new Cache(options?: { [x: string]: any })`
+    - `options` All available options for `redis.createClient()`.
+
+- `cache.set(key: string, value: any, ttl?: number): Promise<any>` Stores or 
+    updates a value.
+    - `ttl` Time-To-Live (in milliseconds).
+
+- `cache.get(key: string): Promise<any>` Retrieves a value by a given key.
+- `cache.delete(key: string): Promise<void>` Deletes a key from the cache.
+- `destroy(): Promise<void>` Clears the cache entirely, the cache will be 
+    closed after calling this method.
+- `close(): void` Closes the cache channel, if you don't close the channel, 
     the program will hang until the redis server closes the connection.
 - `cache.connected` If the channel is open, it will be `true`.
 - `cache.closed` Opposite to `connected`.
 
 ### new Cache()
-
-- `[options]` A redis URL or an object sets the connection information, or a 
-    redis client created by `redis.createClient()`. If this argument is 
-    missing, then connect to redis using default options.
 
 ```javascript
 // Simplest way:
@@ -75,18 +77,3 @@ const redis = require("redis");
 var client = redis.createClient();
 var cache = new Cache(client);
 ```
-
-### cache.set()
-
-- `key` A key string.
-- `value` Any type that can be serialized to JSON.
-- `[ttl]` Time-To-Live, a millisecond number, default is `0`, means persist.
-
-See the example given above.
-
-### cache.destroy()
-
-Returns a promise, if this method is called, then all the cache data this 
-instance connected to will be destroyed, so be careful when you are using it.
-The cache **channel will be closed automatically** after calling this method, 
-so no need to call `cache.close()` again.
