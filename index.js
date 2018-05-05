@@ -1,6 +1,5 @@
-const Redis = require("redis");
-const parse = require("parse-redis-url")(Redis).parse;
-const Clients = {};
+const redis = require("redis");
+const parse = require("parse-redis-url")(redis).parse;
 
 /**
  * Simple Friendly Node.js Cache.
@@ -13,33 +12,35 @@ class Cache {
      *  `redis.createClient()`. If this argument is missing, then connect to 
      *  redis using default options.
      */
-    constructor(options = {}) {
-        options = typeof options == "string" ? parse(options) : options;
-        var { host, port, password, db, prefix, setex } = options;
-        host = host || "127.0.0.1";
-        port = port || 6379;
-
-        this.prefix = prefix || 'sfn-cache:';
-
-        // Data Source Name.
-        this.dsn = "redis://";
-        if (password)
-            this.dsn += `noname:${password}@`;
-        this.dsn += host + ":" + port;
-        if (db)
-            this.dsn += `/${db}`;
-        if (this.prefix)
-            this.dsn += `?prefix=${this.prefix}`;
-
-        if ('function' === typeof setex) {
-            this.client = options;
+    constructor(arg = {}) {
+        if (typeof arg.setex == "function") { // redis client instance
+            this.client = arg;
         } else {
+            let options = typeof arg == "string" ? parse(arg) : arg;
+            let { host, port, password, db, prefix } = options;
+
+            host = host || "127.0.0.1";
+            port = port || 6379;
+            this.prefix = prefix || 'sfn-cache:';
+
+            // Data Source Name.
+            this.dsn = "redis://";
+
+            if (password) this.dsn += `anonymous:${password}@`;
+
+            this.dsn += host + ":" + port;
+
+            if (db) this.dsn += `/${db}`;
+
+            if (this.prefix) this.dsn += `?prefix=${this.prefix}`;
+
             // Same DSN refers to same client.
-            if(!Clients[this.dsn]){
+            if (!Cache.Clients[this.dsn]) {
                 options.prefix = null;
-                Clients[this.dsn] = new Redis.createClient(port, host, options);
+                Cache.Clients[this.dsn] = redis.createClient(port, host, options);
             }
-            this.client = Clients[this.dsn];
+
+            this.client = Cache.Clients[this.dsn];
         }
     }
 
@@ -50,7 +51,7 @@ class Cache {
 
     /** `true` if the channel is closed. */
     get closed() {
-        return this.client ? this.client.closing : true;
+        return this.client ? this.client["closing"] : false;
     }
 
     /**
@@ -63,7 +64,8 @@ class Cache {
         return new Promise((resolve, reject) => {
             try {
                 key = this.prefix + key;
-                var _value = JSON.stringify(value);
+                let _value = JSON.stringify(value);
+
                 if (_value === undefined) {
                     resolve(null);
                 } else if (ttl > 0) {
@@ -86,15 +88,13 @@ class Cache {
      * @param {string} key 
      */
     get(key) {
-        key = this.prefix + key;
         return new Promise((resolve, reject) => {
-            this.client.get(key, (e, data) => {
+            this.client.get(this.prefix + key, (e, data) => {
                 if (e) {
                     reject(e)
                 } else {
                     try {
-                        data = data ? JSON.parse(data) : null;
-                        resolve(data);
+                        resolve(data ? JSON.parse(data) : null);
                     } catch (e) {
                         reject(e);
                     }
@@ -108,26 +108,23 @@ class Cache {
      * @param {string} key 
      */
     delete(key) {
-        key = this.prefix + key;
         return new Promise((resolve, reject) => {
-            this.client.del(key, (e, res) => {
+            this.client.del(this.prefix + key, (e, res) => {
                 e ? reject(e) : resolve(null);
             });
         });
     }
 
-    /**
-     * Clears the cache entirely, the cache will be closed after calling this
-     * method.
-     */
-    destroy() {
+    /** Clears all cache data entirely. */
+    destroy(close = false) {
         return new Promise((resolve, reject) => {
             this.client.keys(this.prefix + "*", (e, data) => {
                 if (e) {
                     reject(e);
                 } else if (data.length) {
-                    var del = (data) => {
-                        var key = data.shift();
+                    let del = (data) => {
+                        let key = data.shift();
+                        
                         this.client.del(key, (e, res) => {
                             if (e) {
                                 reject(e);
@@ -142,15 +139,17 @@ class Cache {
                 }
             });
         }).then(() => {
-            return this.close();
+            return close ? this.close() : undefined;
         });
     }
 
     /** Closes the cache channel. */
     close() {
-        delete Clients[this.dsn];
+        delete Cache.Clients[this.dsn];
         this.client.quit();
     }
 }
+
+Cache.Clients = {};
 
 module.exports = Cache;

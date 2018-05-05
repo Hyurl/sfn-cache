@@ -1,3 +1,5 @@
+import * as redis from "redis";
+
 declare class Cache {
     dsn: string;
     prefix: string;
@@ -5,19 +7,9 @@ declare class Cache {
     readonly connected: boolean;
     readonly closed: boolean;
 
-    /**
-     * @param dsn A redis url.
-     */
-    constructor(dsn?: string);
-
-    constructor(options?: {
-        [x: string]: any,
-        host: string,
-        port?: number,
-        password?: string,
-        db?: string | number,
-        prefix?: string
-    });
+    constructor(redisUrl?: string);
+    constructor(options?: redis.ClientOpts);
+    constructor(client?: redis.RedisClient);
 
     /**
      * Stores or updates a value.
@@ -31,11 +23,8 @@ declare class Cache {
     /** Deletes a key from the cache. */
     delete(key: string): Promise<void>;
 
-    /**
-     * Clears the cache entirely, the cache will be closed after calling this
-     * method.
-     */
-    destroy(): Promise<void>;
+    /** Clears all cache data entirely. */
+    destroy(close?: boolean): Promise<void>;
 
     close(): void;
 }
