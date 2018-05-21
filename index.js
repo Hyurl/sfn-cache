@@ -1,10 +1,10 @@
-const redis = require("redis");
-const parse = require("parse-redis-url")(redis).parse;
+var redis = require("redis");
+var parse = require("parse-redis-url")(redis).parse;
 
 /**
  * Simple Friendly Node.js Cache.
  */
-class Cache {
+var Cache = (function () {
     /**
      * Creates a cache channel.
      * @param {string|object} [options] A redis url or an object sets the 
@@ -12,12 +12,18 @@ class Cache {
      *  `redis.createClient()`. If this argument is missing, then connect to 
      *  redis using default options.
      */
-    constructor(arg = {}) {
+    function Cache(arg) {
+        arg = arg || {};
+
         if (typeof arg.setex == "function") { // redis client instance
             this.client = arg;
         } else {
-            let options = typeof arg == "string" ? parse(arg) : arg;
-            let { host, port, password, db, prefix } = options;
+            var options = typeof arg == "string" ? parse(arg) : arg,
+                host = options.host,
+                port = options.port,
+                password = options.password,
+                db = options.db,
+                prefix = options.prefix;
 
             host = host || "127.0.0.1";
             port = port || 6379;
@@ -44,15 +50,22 @@ class Cache {
         }
     }
 
-    /** `true` if the channel is open. */
-    get connected() {
-        return !this.closed;
-    }
-
-    /** `true` if the channel is closed. */
-    get closed() {
-        return this.client ? this.client["closing"] : false;
-    }
+    Object.defineProperties(Cache.prototype, {
+        connected: {
+            enumerable: true,
+            configurable: true,
+            get: function () {
+                return !this.closed;
+            }
+        },
+        closed: {
+            enumerable: true,
+            configurable: true,
+            get: function () {
+                return this.client ? this.client["closing"] : false;
+            }
+        }
+    });
 
     /**
      * Stores or updates a value.
@@ -60,25 +73,26 @@ class Cache {
      * @param {any} value 
      * @param {number} [ttl] 
      */
-    set(key, value, ttl = 0) {
-        return new Promise((resolve, reject) => {
+    Cache.prototype.set = function (key, value, ttl) {
+        var _this = this;
+        return new Promise(function (resolve, reject) {
             try {
-                key = this.prefix + key;
-                let _value = JSON.stringify(value);
+                key = _this.prefix + key;
+                var _value = JSON.stringify(value);
 
                 if (_value === undefined) {
                     resolve(null);
                 } else if (ttl > 0) {
-                    this.client.psetex(key, ttl, _value, (e) => {
-                        e ? reject(e) : resolve(value);
+                    _this.client.psetex(key, ttl, _value, function (err) {
+                        err ? reject(err) : resolve(value);
                     });
                 } else {
-                    this.client.set(key, _value, (e) => {
-                        e ? reject(e) : resolve(value);
+                    _this.client.set(key, _value, function (err) {
+                        err ? reject(err) : resolve(value);
                     });
                 }
-            } catch (e) {
-                reject(e);
+            } catch (err) {
+                reject(err);
             }
         });
     }
@@ -87,16 +101,17 @@ class Cache {
      * Retrieves a value by a given key.
      * @param {string} key 
      */
-    get(key) {
-        return new Promise((resolve, reject) => {
-            this.client.get(this.prefix + key, (e, data) => {
-                if (e) {
-                    reject(e)
+    Cache.prototype.get = function (key) {
+        var _this = this;
+        return new Promise(function (resolve, reject) {
+            _this.client.get(_this.prefix + key, function (err, data) {
+                if (err) {
+                    reject(err)
                 } else {
                     try {
                         resolve(data ? JSON.parse(data) : null);
-                    } catch (e) {
-                        reject(e);
+                    } catch (err) {
+                        reject(err);
                     }
                 }
             });
@@ -107,27 +122,29 @@ class Cache {
      * Deletes a key from the cache.
      * @param {string} key 
      */
-    delete(key) {
-        return new Promise((resolve, reject) => {
-            this.client.del(this.prefix + key, (e, res) => {
-                e ? reject(e) : resolve(null);
+    Cache.prototype.delete = function (key) {
+        var _this = this;
+        return new Promise(function (resolve, reject) {
+            _this.client.del(_this.prefix + key, function (err, res) {
+                err ? reject(err) : resolve(null);
             });
         });
     }
 
     /** Clears all cache data entirely. */
-    destroy(close = false) {
-        return new Promise((resolve, reject) => {
-            this.client.keys(this.prefix + "*", (e, data) => {
-                if (e) {
-                    reject(e);
+    Cache.prototype.destroy = function (close) {
+        var _this = this;
+        return new Promise(function (resolve, reject) {
+            _this.client.keys(_this.prefix + "*", function (err, data) {
+                if (err) {
+                    reject(err);
                 } else if (data.length) {
-                    let del = (data) => {
-                        let key = data.shift();
-                        
-                        this.client.del(key, (e, res) => {
-                            if (e) {
-                                reject(e);
+                    var del = function (data) {
+                        var key = data.shift();
+
+                        _this.client.del(key, function (err, res) {
+                            if (err) {
+                                reject(err);
                             } else {
                                 data.length ? del(data) : resolve(null);
                             }
@@ -138,18 +155,21 @@ class Cache {
                     resolve(null);
                 }
             });
-        }).then(() => {
+        }).then(function () {
             return close ? this.close() : undefined;
         });
     }
 
     /** Closes the cache channel. */
-    close() {
+    Cache.prototype.close = function () {
         delete Cache.Clients[this.dsn];
         this.client.quit();
     }
-}
 
-Cache.Clients = {};
+    Cache.Clients = {};
+
+    return Cache;
+}());
 
 module.exports = Cache;
+module.exports.default = Cache;
