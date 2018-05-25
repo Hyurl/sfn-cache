@@ -172,4 +172,4 @@ var Cache = (function () {
 }());
 
 module.exports = Cache;
-module.exports.default = Cache;
+// module.exports.default = Cache;

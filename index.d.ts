@@ -30,4 +30,4 @@ declare class Cache {
 }
 
 export = Cache;
-export default Cache;
+// export default Cache;
